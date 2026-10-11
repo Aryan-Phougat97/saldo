@@ -1,7 +1,9 @@
 import { useState } from "react";
-import type { Budget } from "../hooks/useBudget";
+import type { Budget } from "../state/store";
 
-const PARTS = [
+type PartKey = "liquidity" | "commitment" | "goal" | "steadiness";
+
+const PARTS: Array<{ key: PartKey; name: string; move: string }> = [
   {
     key: "liquidity",
     name: "Cash cushion",
@@ -22,7 +24,7 @@ const PARTS = [
     name: "Spending rhythm",
     move: "It rises when daily spending stays even, and falls after one very large day next to quiet ones.",
   },
-] as const;
+];
 
 export default function HealthScore({ budget, hot }: { budget: Budget; hot: boolean }) {
   const { shown } = budget;
@@ -42,7 +44,7 @@ export default function HealthScore({ budget, hot }: { budget: Budget; hot: bool
       </p>
       <ul className="mt-4 grid gap-2">
         {PARTS.map((p) => {
-          const value = h[p.key as keyof typeof h] as number;
+          const value: number = h[p.key];
           const open = openKey === p.key;
           return (
             <li key={p.key} className="rounded-2xl border border-[var(--color-hairline)]">

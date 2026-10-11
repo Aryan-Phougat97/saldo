@@ -1,14 +1,18 @@
 # Saldo — Know what a purchase costs before you buy
 
-Saldo is a calm, single-page budget companion for a **₹10,000 / 30-day month**. It answers one
-question before every purchase: *if I buy this, what exactly changes?* Simulate first, spend second.
+Saldo is a calm, single-page budget companion for a **₹10,000 / 30-day month**, built for Gen Z
+users learning to feel the weight of a decision *before* it lands. It answers one question before
+every purchase: *if I buy this, what exactly changes?* Simulate first, spend second.
 
 - **Landing page** (`#`): interactive hero demo, real-life moments, the five-step cascade, open
   maths, and FAQ.
-- **Live demo** (`#/app`): the full budget experience — safe-to-spend hero, simulation with
-  Apply/Discard, goal tracking, 30-day forecast, and a four-part steadiness signal.
+- **Live demo** (`#/app`): safe-to-spend hero with income + reconciliation, purchase/subscribe/
+  cancel/shock/goal-transfer simulation with Apply/Discard, goal tracking, 30-day forecast, named
+  risk, four-part steadiness, subscriptions, shock responses, and a decision log.
 - **Mock data only.** No login, no backend, no real money. Everything lives in React memory and
-  resets on reload.
+  resets on reload (or via Reset demo).
+
+Hash routes: `#` landing page, `#/app` the budget demo.
 
 ---
 
@@ -18,91 +22,67 @@ question before every purchase: *if I buy this, what exactly changes?* Simulate 
 2. [User guide](#2-user-guide)
 3. [Worked example](#3-worked-example-the-1499-headphones)
 4. [How the numbers work](#4-how-the-numbers-work)
-5. [Accessibility](#5-accessibility)
-6. [For developers](#6-for-developers)
-7. [Testing](#7-testing)
-8. [Deploying to production](#8-deploying-to-production)
-9. [Scope and limitations](#9-scope-and-limitations)
-10. [FAQ](#10-faq)
+5. [The simulation model](#5-the-simulation-model)
+6. [The health score](#6-the-health-score)
+7. [Accessibility decisions](#7-accessibility-decisions)
+8. [Performance decisions](#8-performance-decisions)
+9. [For developers](#9-for-developers)
+10. [Testing](#10-testing)
+11. [Deploying to production](#11-deploying-to-production)
+12. [Scope and limitations](#12-scope-and-limitations)
+13. [How the app maps to the brief](#13-how-the-app-maps-to-the-brief)
+14. [FAQ](#14-faq)
 
 ---
 
 ## 1. Quick start
 
-**To explore (no setup):**
-
-1. Run the app (see [For developers](#6-for-developers)) and open the landing page.
-2. In the hero card, tap a sample purchase — **Headphones · ₹1,499** — and watch the daily number,
-   goal date, and forecast move.
-3. Click **Open the full demo** to enter the complete experience.
+**To explore (no setup):** open the landing page, tap a sample purchase in the hero, then
+**Open the full demo**.
 
 **To run locally:**
 
 ```bash
 npm install
-npm run dev      # development server with hot reload
-npm run build    # type-check + production build into dist/
-npm test         # unit tests (Vitest)
+npm run dev        # development server with hot reload
+npm run build      # type-check + production build into dist/
+npm test           # unit + axe tests (Vitest)
+npm run lint       # ESLint, zero warnings allowed
+npm run typecheck  # tsc --noEmit, zero errors allowed
 ```
 
 ---
 
 ## 2. User guide
 
-### The two numbers that matter
+### The numbers that matter
 
 | Number | Where | Meaning |
 |---|---|---|
-| **Balance** | Hero, top | Cash in hand right now: opening balance minus everything spent. |
-| **Safe to spend today** | Hero, large figure | What you can spend today and still cover upcoming bills, the safety buffer, and the rest of the month. |
+| **Balance** | Hero, top | Cash in hand: opening (₹6,000 cash + ₹4,000 freelance payout) minus everything spent. |
+| **Safe to spend today** | Hero, large figure | Today's fair share after upcoming bills and the ₹600 buffer are protected. |
+| **Reconciliation** | Hero + breakdown | `opening − spent − bills = free + buffer` — every rupee accounted for, in one line. |
+| **Risk** | Hero badge | Low / medium / high with a plain-language reason, never color alone. |
 
-Both live in an `aria-live` region, so screen readers announce every update.
+Balance and safe-to-spend sit in an `aria-live="polite"` region; a visually-hidden live region
+announces a summary after every apply, discard, or reset.
 
 ### See the maths (tap the big number)
 
-Click, tap, or press **Enter** on the safe-to-spend figure to open a breakdown sheet showing every line:
-opening → spent → balance → bills ahead → buffer → spendable → divided over days left. Close it with
-**Escape**, the **Close** button, or by clicking outside. Focus returns to the number automatically.
+Click, tap, or press **Enter** on the safe-to-spend figure for the breakdown sheet: starting cash,
+income, opening, spent, balance, bills, buffer, spendable, days left, the answer — plus a final
+reconciliation line. **Escape**, **Close**, or outside-click closes it; focus returns to the number.
 
 ### Simulate before you spend
 
-1. Fill in **what**, **amount (₹)**, and **day**; tick **monthly repeat** if it's a subscription
-   (it will preview against commitments instead of spending).
-2. Click **See preview**. A preview card shows exactly what would change — balance, safe-to-spend,
-   goal finish day, and month-end forecast — plus one plain-language sentence about the impact.
-3. Click **Apply** to commit it, or **Discard** to throw it away. Discarding changes nothing.
+Purchases and subscriptions go through **Try a purchase first**; cancellations through
+**Subscriptions** (shows monthly + yearly savings); surprises through **Unexpected expenses**
+(pay now / split over 7 days / defer 7 days); savings through the goal card's transfer row. Every
+path previews before anything moves — balance, safe-to-spend, goal date, forecast, risk, health —
+then **Apply** commits it (and logs it) or **Discard** drops it without a trace.
 
-When you apply, the page updates in a fixed, visible order:
-
-1. Balance drops.
-2. Safe-to-spend recalculates.
-3. The goal date moves (a new date appears if the goal slips past its deadline).
-4. The 30-day forecast line bends.
-5. The steadiness components shift.
-
-If your system requests reduced motion, all five land instantly with no animation.
-
-### Goals
-
-The **Goa trip** card shows saved vs. target, the daily pace needed to hit the deadline, and the
-projected finish day at today's safe amount. If a simulation pushes the finish past the deadline,
-you see the exact new day and how many days late it is.
-
-### Forecast
-
-One SVG line (no chart library): actual balances for past days, then projected balances —
-current balance minus upcoming bills minus your average daily pace — through day 30. During a
-preview, a second dashed line shows where the month would end *with* the purchase.
-
-### Steadiness score
-
-A quiet 0–100 signal, deliberately not a grade. Four parts, each with its own bar; tap any part to
-learn what would move it:
-
-1. **Cash cushion** — balance relative to the ₹600 buffer.
-2. **Bills ahead** — upcoming bills against balance (smaller is better).
-3. **Goal pace** — savings progress measured against time passed.
-4. **Spending rhythm** — even daily spending scores higher than one huge day between quiet ones.
+Applied decisions cascade in order: balance → safe-to-spend → goal date → forecast → steadiness
+(instant when reduced motion is requested). **Reset demo** in the footer restores day 12.
 
 ### Keyboard map
 
@@ -116,154 +96,181 @@ learn what would move it:
 
 ## 3. Worked example: the ₹1,499 headphones
 
-Starting position on **day 12 of 30**: balance ₹8,830 · bills ahead ₹717 · spendable ₹7,513 ·
-safe **₹395/day** · Goa fund finishing **day 20** · month ending near **₹6,092**.
+Day 12 of 30: balance ₹8,830 · bills ₹717 · spendable ₹7,513 · safe **₹395/day** · Goa finishes
+**day 20** · forecast ≈ **₹6,092** · risk **low**.
 
-Simulating **Headphones · ₹1,499** (one-off, day 12) previews:
+Simulating **Headphones · ₹1,499** previews balance ₹7,331 · safe ₹316 · goal day 22 · forecast
+≈ ₹4,593 · risk stays low with its reason stated. The preview sentence reads: *"₹1,499 is about
+3.8× today's safe amount…"* Apply cascades the five updates; discard leaves every figure untouched.
 
-| Figure | Before → After |
-|---|---|
-| Balance | ₹8,830 → ₹7,331 |
-| Safe to spend | ₹395 → ₹316 |
-| Goal finish | Day 20 → Day 22 |
-| Month-end forecast | ≈ ₹6,092 → ≈ ₹4,593 |
-
-The preview sentence reads: *"₹1,499 is about 3.8× today's safe amount of ₹395. Applied, each of the
-19 remaining days averages ₹316."* Apply it, and the five updates cascade in order; discard it, and
-every figure stays exactly as it was.
+Cancelling **Netflix · ₹199/mo** previews: month keeps ₹199, the year would have cost ₹2,388, safe
+rises ₹395 → ₹405.
 
 ---
 
 ## 4. How the numbers work
 
-Core formulas — implemented exactly in `src/lib/finance.ts`, each covered by unit tests in
-`src/lib/finance.test.ts`:
+Implemented exactly in `src/domain/formulas.ts` (JSDoc on every export), tested in
+`src/domain/formulas.test.ts`:
 
 | Formula | Seed value |
 |---|---|
-| `balance = openingBalance − sum(spent)` | ₹8,830 |
+| `opening = openingBase + income received by today` | ₹10,000 |
+| `balance = opening − sum(spent)` | ₹8,830 |
 | `committedAhead = sum(commitments due day 12–30)` | ₹717 |
 | `daysLeft = totalDays − currentDay + 1` | 19 |
 | `spendable = max(0, balance − committedAhead − bufferTarget)` | ₹7,513 |
 | `safeToSpendToday = floor(spendable / daysLeft)` | ₹395 |
 | `goalPace = (target − saved) / max(1, deadlineDay − currentDay + 1)` | ₹173.68/day |
 | `forecastEnd = balance − committedAhead − avgDailySpend × daysLeft` | ≈ ₹6,092 |
-| `avgDailySpend = sum(spent) / (currentDay − 1)` | ₹106.36 over 11 elapsed days |
-
-Derived figures and their documented assumptions:
-
-- **Goal finish day** = `currentDay + ceil(remaining / max(1, safePerDay)) − 1`. Assumes you can set
-  aside up to today's safe amount each day.
-- **Health (0–100)** = average of cash cushion (`balance / 2×buffer`, capped), bills-ahead
-  (`1 − committed/balance`), goal pace (progress vs. time elapsed), and spending rhythm (inverse of
-  variation across days with spending; neutral 80 with fewer than two active days).
-- **Recurring simulations** preview against `commitments`; one-offs against `spent`.
+| `avgDailySpend = sum(spent) / (currentDay − 1)` | ₹106.36 over 11 days |
+| `goalFinish = currentDay + ceil(remaining / max(1, safePerDay)) − 1` | day 20 |
 
 ---
 
-## 5. Accessibility
+## 5. The simulation model
 
-Committed to as requirements, not extras:
+One pure engine (`src/domain/simulate.ts → applyDecision(state, decision) → { state, ok }`)
+serves both paths, so preview and apply can never disagree:
 
-- **Semantics:** `<header>`, `<main>`, `<section>` with headings; real `<button>`s; every input has a
-  `<label>`. Status pills pair color with text and an icon — never color alone.
-- **Screen readers:** balance and safe-to-spend sit in `aria-live="polite"`; a visually-hidden live
-  region announces a summary after every Apply/Discard. The forecast SVG has a title and description.
-- **Dialog:** `role="dialog"` + `aria-modal` + accessible name, focus trap, Escape to close, and
-  focus returned to the trigger.
-- ** contrast:** body text meets WCAG AA 4.5:1, large text 3:1. Focus rings are always visible and
-  never suppressed.
-- **Motor and motion:** all touch targets ≥ 44×44px; `prefers-reduced-motion` collapses every
-  animation (staggered cascade, swaps, scroll reveals) to instant updates.
-- **Zoom and viewport:** fluid `clamp()` type and wrapping grids — no horizontal scrolling at 200%
-  zoom; layouts hold at 375px, 768px, and 1280px.
+- **Preview:** `selectPreview` runs the draft through the engine on a copy and derives numbers.
+  No state is touched; the log is untouched.
+- **Apply:** the reducer commits the engine's output and appends one log entry. Unknown or
+  consumed targets (double-cancel, answered shock) return `ok: false` and change nothing.
+- **Discard:** clears the draft and any pending highlight timers. No log entry, no announcement
+  residue beyond the polite "discarded" confirmation.
+
+Decision kinds: `purchase`, `subscribe`, `cancel-subscription`, `shock` (pay-now/split/defer),
+`transfer-goal` (moves cash into `saved` and records matching spent so the balance drops truthfully).
 
 ---
 
-## 6. For developers
+## 6. The health score
 
-**Stack:** React 19 + Vite 8 + TypeScript + Tailwind CSS v4. Self-hosted Inter Variable
-(`@fontsource-variable/inter`). No chart library, no router, no runtime network requests.
+`src/domain/health.ts → calcHealth(...)`: four 0–100 parts, plain mean, rounded. Neutral by design.
+
+1. **Cash cushion** — `balance / (2 × buffer)`, capped. Falls linearly as spending nears the buffer.
+2. **Bills ahead** — `1 − committed / balance`. Smaller upcoming bills score higher; ≤0 balance → 0.
+3. **Goal pace** — `(saved/target)` vs `(elapsed/totalDays)`. Ahead of schedule → toward 100.
+4. **Spending rhythm** — `1 − cv/2` over days with spending (cv = coefficient of variation).
+   Even days score high; one huge day among quiet ones scores low; <2 active days → neutral 80.
+
+---
+
+## 7. Accessibility decisions
+
+- Semantics: landmarks, real buttons, labelled inputs; status always pairs color with text + icon.
+- Live regions: numbers in `aria-live="polite"`; hidden region announces apply/discard/reset summaries.
+- Dialog: `role="dialog"`, `aria-modal`, name, focus trap, Escape, focus returned to trigger.
+- SVG charts carry `role="img"` with title/description; month strip is decorative with an SR summary.
+- Contrast AA (4.5:1 body, 3:1 large), permanent visible focus rings, ≥44px targets.
+- `prefers-reduced-motion` collapses stagger, swaps, and reveals to instant.
+- Fluid type + wrapping grids: no horizontal scroll at 200% zoom; holds 320–1280px.
+- Automated backstop: `src/a11y.test.tsx` runs axe on both views (0 violations). jsdom can't judge
+  contrast/focus/motion, so those stay manual (see AUDIT.md).
+
+---
+
+## 8. Performance decisions
+
+- No chart library (hand SVG), no router (hash routes), no images, no runtime fetches.
+- Measured production bundle: **JS ~83KB gzip** (target <150KB ✓), **CSS ~7.9KB gzip** (✓);
+  dialog code-split into its own 3.7KB chunk via `React.lazy` (null fallback, no layout shift).
+- Font stays optimal: self-hosted Inter Variable with `font-display: swap` + unicode-range, so only
+  latin + latin-ext (~133KB, async) ever download.
+- Derivations memoized; form inputs keep local state so typing never re-renders the tree; static
+  components (`Wordmark`, `MonthStrip`) are `memo`'d. Animations touch transform/opacity only.
+- No Lighthouse/axe-browser run was possible in this environment (no Chromium); bundle numbers and
+  jsdom axe above are the measured substitutes, recorded honestly in AUDIT.md.
+
+---
+
+## 9. For developers
+
+**Stack:** React 19 + Vite 8 + TypeScript (strict) + Tailwind v4. Dev-only: Vitest, jsdom,
+Testing Library, axe-core, ESLint (ts, react-hooks, jsx-a11y).
 
 ```
 src/
-  lib/finance.ts        # pure formulas (the contract — change with care)
-  lib/finance.test.ts   # 12 Vitest unit tests
-  state/seed.ts         # the fixed mock month (day 12 of 30)
-  hooks/useBudget.ts    # real state + simulation layer + staggered reveal
-  components/           # BreakdownDialog, Simulator, ForecastChart, HealthScore
-  landing/Landing.tsx   # landing page (interactive hero, moments, FAQ)
-  App.tsx               # the demo (route #/app)
-  main.tsx              # hash router: # landing, #/app demo
+  domain/      # pure TS, zero React: types, formulas, health, risk, simulate, selectors
+  state/       # store.ts — useReducer + draft layer + stagger timers (single owner)
+  data/        # seed.ts — the typed mock month, scenario comment included
+  lib/         # format (INR, day math), series (forecast + SVG path builders)
+  components/  # shared: dialog, simulator form, chart, health, wordmark, error boundary
+  features/    # per-area UI: landing/*, goals, subscriptions, shocks, log, risk
+  styles/      # index.css — tokens, type scale, motion (all reduced-motion aware)
 ```
 
-**Key architecture decisions:**
-
-- **Simulation is a layer, not a mutation.** `preview` derives figures from `real state + draft`
-  without touching state; Apply commits the draft into `spent` or `commitments`, Discard drops it.
-- **Derived data is memoized** (`useMemo`) so typing in the form never re-renders the whole tree.
-- **The stagger is ordered state, not choreography magic:** `hotStage` 1→5 highlights balance,
-  safe, goal, forecast, health in sequence (300ms steps), then clears.
-- **Hash routing** keeps the bundle router-free: `#` vs. `#/app`. In-page anchors (`#maths`, `#faq`)
-  intentionally bypass scroll-reset so native section scrolling works under the sticky header.
-
-**Visual system:** warm near-white `#FAFAF7`, near-black ink, one accent (`#0A5CF5`) used sparingly,
-muted green/amber status with icon + text, 20px card radius, hairline dividers, no gradients, no
-emoji. Motion is 200–400ms ease-out, transform/opacity only. (Taste-skill direction applied; its
-anti-Inter default was overridden by the brief's explicit Inter requirement.)
+Rules honored: no `any`, no unchecked casts, no non-null assertions; every file <250 lines;
+`npm run lint` clean at `--max-warnings 0`. Components read through `selectDerived`/`selectPreview`,
+never recombine formulas. See `docs/decisions.md` for the why behind the big calls.
 
 ---
 
-## 7. Testing
+## 10. Testing
 
 ```bash
-npm test          # single run
-npm run test:watch
+npm test            # all suites once
+npm run test:watch  # watch mode
 ```
 
-`src/lib/finance.test.ts` pins every formula to the seed scenario (balance ₹8,830, safe ₹395, pace
-₹173.68…), plus edge cases (zero days left, empty history, pre-today commitments excluded), the
-exact ₹1,499 simulation delta, health bounds, and goal-date movement. Manual checklist before
-release: fresh load with zero console output → open/Escape the breakdown → preview → apply (verify
-the 1-2-3-4-5 order) → discard (verify nothing changed) → full keyboard pass → 375/768/1280px.
+42 tests, 5 files: 12 core formula tests, 7 edge cases (zero balance, finished/unreachable goals,
+in-window/past-window commitments, clamps), 6 risk classifications, 11 engine tests (all five
+decision kinds, double-apply rejection, input purity via frozen state), 4 selector tests (seed
+numbers, preview≡apply, no-touch preview), 2 axe tests. Manual release checklist: fresh load with a
+clean console → breakdown open/Escape → apply (1-2-3-4-5 order) → discard (nothing moves) → cancel
+a subscription → answer a shock → reset → keyboard-only full pass → 375/768/1280px.
+
+End-to-end in a real Chromium (`node scripts/e2e.mjs` with `npm run dev` running): 21 checks cover
+fresh load, overflow at 375/768/1280 on both views, keyboard-only dialog open/close with focus
+return, preview → apply → discard, subscription cancel with annual impact, shock response, decision
+log entries, reset, and zero console errors or warnings.
 
 ---
 
-## 8. Deploying to production
+## 11. Deploying to production
 
 ```bash
 npm run build   # emits static files into dist/
 ```
 
-Serve `dist/` from any static host (Netlify, Vercel, GitHub Pages, nginx). No environment variables,
-no server, no runtime fetches — if the host serves `index.html` at `/`, the `#/app` route works
-automatically since it's hash-based. Current production bundle: ~80KB gzipped JS (React included),
-~8KB CSS, self-hosted fonts.
+Serve `dist/` from any static host. No env vars, no server; hash routing needs no server config.
 
 ---
 
-## 9. Scope and limitations
+## 12. Scope and limitations
 
-- One fixed mock month (days 1–30, today = day 12). Reloading resets everything.
-- One goal (Goa trip). No editing of history, no categories, no multi-month view.
-- Goal projection assumes up to today's safe amount can be set aside daily — a simplification,
-  stated in the UI as "around day N".
-- Health is a descriptive signal, not financial advice.
+- One fixed mock month (today = day 12); reload or Reset restores it.
+- One goal; goal projection assumes up to today's safe amount saved daily (stated in UI as "around").
+- Health and risk are descriptive signals, not financial advice.
+- No Lighthouse/browser-axe run in this environment (see §8); visual/keyboard device pass still owed.
 
 ---
 
-## 10. FAQ
+## 13. How the app maps to the brief
 
-**Is any of this real money?**
-No. Fixed mock data, nothing connects to a bank, nothing leaves your browser.
+| Brief requirement | Implementation |
+|---|---|
+| ₹10,000 budget over 30 days, Gen Z voice | Seed scenario, plain specific copy, no shame language |
+| Simulate before deciding; visible consequences | Draft-layer engine + per-kind previews + ordered cascade |
+| Income connected to balance | Freelance payout in seed, hero caption, breakdown rows |
+| Reconciliation in one place | `opening − spent − bills = free + buffer` (hero + dialog) |
+| Goal finish date moves | GoalCard + `calcGoalFinishDay` |
+| Subscriptions + cancel simulation | Subscriptions panel, monthly + annual impact |
+| Shock events category | 3 shocks, 3 responses each |
+| Named risk in text | RiskBadge + `classifyRisk` + preview rows |
+| Health score, 4 components, tap-to-explain | HealthScore + `calcHealth` |
+| Forecast line bends | ForecastChart dashed preview path |
+| Apply/discard, discard leaves no trace | Reducer draft layer, DecisionLog (applied only) |
+| Decision log with costs | DecisionLog |
+| Reduced-motion version | Instant updates, tested via media query |
+| Small bundle, no chart lib, self-hosted font | §8 measurements |
 
-**Do I need an account?**
-There isn't one. Open the demo and it's already day 12.
+---
 
-**What if I overshoot the safe amount?**
-The number recalculates, the goal date slips to its new day, the forecast bends. Stated plainly —
-no warnings, no grades.
+## 14. FAQ
 
-**What happens after day 30?**
-The demo ends there. A real version would close the month, carry the buffer forward, and start a
-fresh 30 days.
+**Is any of this real money?** No. Fixed mock data, nothing leaves your browser.
+**Do I need an account?** There isn't one. Reload to restart the month.
+**What if I overshoot the safe amount?** Numbers recalculate, dates slip, reasons stated. No grades.
+**What happens after day 30?** The demo ends there; a real version would close the month and start fresh.

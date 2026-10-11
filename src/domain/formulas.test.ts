@@ -7,11 +7,11 @@ import {
   calcForecastEnd,
   calcGoalFinishDay,
   calcGoalPace,
-  calcHealth,
   calcSafeToSpend,
   calcSpendable,
-} from "./finance";
-import { seed } from "../state/seed";
+} from "./formulas";
+import { calcHealth } from "./health";
+import { seed } from "../data/seed";
 
 describe("core formulas (seed: day 12 of 30, ₹10,000 budget)", () => {
   it("balance = openingBalance - sum(spent)", () => {
@@ -72,6 +72,49 @@ describe("core formulas (seed: day 12 of 30, ₹10,000 budget)", () => {
     expect(simBalance).toBe(7331);
     const spendable = calcSpendable(simBalance, 717, 600);
     expect(calcSafeToSpend(spendable, 19)).toBe(Math.floor((7331 - 717 - 600) / 19));
+  });
+});
+
+describe("edge cases", () => {
+  it("zero balance clamps spendable and safe to zero", () => {
+    const balance = calcBalance(1000, [{ id: "a", label: "All of it", amount: 1000, day: 1 }]);
+    expect(balance).toBe(0);
+    expect(calcSpendable(balance, 0, 600)).toBe(0);
+    expect(calcSafeToSpend(0, 19)).toBe(0);
+  });
+
+  it("a commitment past the 30-day window is ignored", () => {
+    expect(
+      calcCommittedAhead([{ id: "f", label: "Future", amount: 9999, day: 31 }], 12, 30),
+    ).toBe(0);
+  });
+
+  it("a commitment due on the current day counts", () => {
+    expect(
+      calcCommittedAhead([{ id: "t", label: "Today", amount: 119, day: 12 }], 12, 30),
+    ).toBe(119);
+  });
+
+  it("negative spendable clamps to zero", () => {
+    expect(calcSpendable(-200, 100, 600)).toBe(0);
+    expect(calcSpendable(500, 2000, 0)).toBe(0);
+  });
+
+  it("a finished goal finishes today with no daily pace", () => {
+    const done = { id: "g", label: "Done", target: 1000, saved: 1000, deadlineDay: 30 };
+    expect(calcGoalFinishDay(done, 12, 395)).toBe(12);
+    expect(calcGoalPace(done, 12)).toBe(0);
+  });
+
+  it("an unreachable goal projects past its deadline", () => {
+    const big = { id: "g", label: "Far", target: 50000, saved: 0, deadlineDay: 30 };
+    expect(calcGoalFinishDay(big, 12, 395)).toBeGreaterThan(30);
+  });
+
+  it("health at zero balance scores commitment 0 without NaN", () => {
+    const h = calcHealth(0, 717, 600, seed.goals[0], seed.spent, 12, 30);
+    expect(h.commitment).toBe(0);
+    expect(Number.isNaN(h.overall)).toBe(false);
   });
 });
 

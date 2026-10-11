@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { formatINR } from "../lib/finance";
-import type { Budget } from "../hooks/useBudget";
+import { formatINR } from "../lib/format";
+import type { Budget } from "../state/store";
 
 export default function Simulator({ budget }: { budget: Budget }) {
   const { simulation, simulate, discard, apply, real, preview, currentDay, totalDays } = budget;
@@ -21,13 +21,29 @@ export default function Simulator({ budget }: { budget: Budget }) {
       setError("Enter an amount above ₹0.");
       return;
     }
+    if (n > 100000) {
+      setError("Keep it under ₹1,00,000 — this demo covers one small month.");
+      return;
+    }
     if (!Number.isFinite(d) || d < 1 || d > totalDays) {
       setError(`Enter a day between 1 and ${totalDays}.`);
       return;
     }
     setError("");
-    simulate({ label: label.trim(), amount: n, day: Math.round(d), recurring });
+    const trimmed = label.trim();
+    simulate(
+      recurring
+        ? { kind: "subscribe", label: trimmed, amount: n, day: Math.round(d) }
+        : { kind: "purchase", label: trimmed, amount: n, day: Math.round(d) },
+    );
   };
+
+  // This form only drafts purchases and subscriptions; other decision kinds
+  // get their own entries in the new Batch C panels.
+  const draft =
+    simulation && (simulation.kind === "purchase" || simulation.kind === "subscribe")
+      ? simulation
+      : null;
 
   return (
     <section aria-labelledby="sim-title" className="card p-6">
@@ -109,11 +125,11 @@ export default function Simulator({ budget }: { budget: Budget }) {
         </button>
       </div>
 
-      {simulation && preview && (
+      {draft && preview && (
         <div aria-live="polite" className="mt-5 rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4">
           <h3 className="text-sm font-semibold">
-            Preview: {simulation.label} · {formatINR(simulation.amount)}
-            {simulation.recurring ? " · monthly" : ""}
+            Preview: {draft.label} · {formatINR(draft.amount)}
+            {draft.kind === "subscribe" ? " · monthly" : ""}
           </h3>
           <dl className="mt-2 grid gap-1.5 text-sm">
             <div className="flex justify-between gap-4">
@@ -140,10 +156,25 @@ export default function Simulator({ budget }: { budget: Budget }) {
                 {formatINR(real.forecast)} → {formatINR(preview.forecast)}
               </dd>
             </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[var(--color-ink-soft)]">Risk</dt>
+              <dd className="tnum font-medium">
+                {real.risk.level} → {preview.risk.level}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[var(--color-ink-soft)]">Steadiness</dt>
+              <dd className="tnum font-medium">
+                {real.health.overall} → {preview.health.overall} / 100
+              </dd>
+            </div>
           </dl>
+          {(preview.risk.level !== real.risk.level || preview.risk.reason !== real.risk.reason) && (
+            <p className="mt-2 text-sm text-[var(--color-ink-soft)]">{preview.risk.reason}</p>
+          )}
           <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
-            {simulation.amount > real.safe
-              ? `${formatINR(simulation.amount)} is about ${(simulation.amount / Math.max(1, real.safe)).toFixed(1)}× today's safe amount of ${formatINR(real.safe)}. Applied, each of the ${real.daysLeft} remaining days averages ${formatINR(preview.safe)}.`
+            {draft.amount > real.safe
+              ? `${formatINR(draft.amount)} is about ${(draft.amount / Math.max(1, real.safe)).toFixed(1)}× today's safe amount of ${formatINR(real.safe)}. Applied, each of the ${real.daysLeft} remaining days averages ${formatINR(preview.safe)}.`
               : `Within today's safe amount of ${formatINR(real.safe)}. Applied, tomorrow starts at ${formatINR(preview.safe)} a day.`}
           </p>
           <div className="mt-3 flex gap-2">

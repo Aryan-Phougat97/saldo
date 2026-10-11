@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { formatINR } from "../lib/finance";
-import type { Budget } from "../hooks/useBudget";
+import { formatINR } from "../lib/format";
+import type { Budget } from "../state/store";
 
 interface Props {
   budget: Budget;
@@ -12,11 +12,12 @@ interface Props {
 export default function BreakdownDialog({ budget, open, onClose, returnRef }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const { real, spent, commitments, openingBalance, bufferTarget, currentDay, totalDays } = budget;
+  const { real, spent, commitments, income, openingBase, openingBalance, bufferTarget, currentDay, totalDays } = budget;
 
   useEffect(() => {
     if (!open) return;
     closeRef.current?.focus();
+    const trigger = returnRef.current;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -41,17 +42,21 @@ export default function BreakdownDialog({ budget, open, onClose, returnRef }: Pr
     document.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("keydown", onKey, true);
-      returnRef.current?.focus();
+      trigger?.focus();
     };
   }, [open, onClose, returnRef]);
 
   if (!open) return null;
 
   const rows: Array<[string, string]> = [
+    ["Starting cash", formatINR(openingBase)],
+    ...income.map(
+      (i): [string, string] => [`${i.label} (day ${i.day})`, "+ " + formatINR(i.amount)],
+    ),
     ["Opening balance", formatINR(openingBalance)],
     [`Spent so far (${spent.length} items)`, "− " + formatINR(openingBalance - real.balance)],
     ["Balance now", formatINR(real.balance)],
-    ["Committed ahead (day 12–30)", "− " + formatINR(real.committedAhead)],
+    ["Committed ahead (day " + currentDay + "–" + totalDays + ")", "− " + formatINR(real.committedAhead)],
     ["Safety buffer", "− " + formatINR(bufferTarget)],
     ["Spendable", formatINR(real.spendable)],
     [`Divided over ${real.daysLeft} days left`, "÷ " + real.daysLeft],
@@ -123,6 +128,11 @@ export default function BreakdownDialog({ budget, open, onClose, returnRef }: Pr
               </li>
             ))}
         </ul>
+        <p className="tnum mt-4 border-t border-[var(--color-hairline)] pt-3 text-sm text-[var(--color-ink-soft)]">
+          Reconciled: {formatINR(openingBalance)} − {formatINR(openingBalance - real.balance)} spent −{" "}
+          {formatINR(real.committedAhead)} bills = {formatINR(real.spendable)} free +{" "}
+          {formatINR(bufferTarget)} buffer.
+        </p>
       </div>
     </div>
   );
