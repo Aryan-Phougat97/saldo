@@ -1,12 +1,12 @@
-import type { RiskAssessment } from "../../domain/types";
+import type { RiskAssessment, RiskLevel } from "../../domain/types";
 
-const STYLES: Record<RiskAssessment["level"], string> = {
+const STYLES: Record<RiskLevel, string> = {
   low: "bg-[var(--color-good-bg)] text-[var(--color-good-ink)]",
   medium: "bg-[var(--color-warn-bg)] text-[var(--color-warn-ink)]",
   high: "bg-[var(--color-bad-bg)] text-[var(--color-bad-ink)]",
 };
 
-const ICONS: Record<RiskAssessment["level"], string> = {
+const ICONS: Record<RiskLevel, string> = {
   low: "●",
   medium: "▲",
   high: "■",

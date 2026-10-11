@@ -6,13 +6,24 @@ import type { Budget } from "../../state/store";
  * and for how much. Discarded simulations never appear here.
  */
 export default function DecisionLog({ budget }: { budget: Budget }) {
-  const { log } = budget;
+  const { log, undo, canUndo } = budget;
 
   return (
     <section aria-labelledby="log-title" className="card p-6">
-      <h2 id="log-title" className="text-xl font-semibold tracking-tight">
-        Decision log
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="log-title" className="text-xl font-semibold tracking-tight">
+          Decision log
+        </h2>
+        <button
+          type="button"
+          onClick={undo}
+          disabled={!canUndo}
+          aria-label={canUndo ? "Undo last applied decision" : "Nothing to undo yet"}
+          className="min-h-[44px] rounded-xl border border-[var(--color-hairline)] bg-white px-4 text-sm font-medium active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Undo
+        </button>
+      </div>
       {log.length === 0 ? (
         <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
           No decisions yet. Simulate something above — only applied choices land here.

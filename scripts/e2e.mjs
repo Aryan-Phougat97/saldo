@@ -84,6 +84,13 @@ await page.waitForTimeout(300);
 const logItems = await page.locator("section:has(h2:text('Decision log')) li").count();
 assert(logItems >= 3, `decision log has entries (got ${logItems})`);
 
+// 8b. Undo restores the pre-shock month
+await page.getByRole("button", { name: "Undo last applied decision" }).click();
+await page.waitForTimeout(300);
+const heroUndo = await page.locator("main").textContent();
+assert(/₹7,331/.test(heroUndo ?? ""), "undo restores balance to 7331");
+assert(((await page.locator("section:has(h2:text('Decision log')) li").count()) === 2), "undo shrinks the log");
+
 // 9. Screenshots of demo at 3 widths
 for (const w of [1280, 768, 375]) {
   await page.setViewportSize({ width: w, height: 900 });

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { formatINR } from "../lib/format";
+import { calcOpening } from "../domain/formulas";
 import type { Budget } from "../state/store";
 
 interface Props {
@@ -53,7 +54,7 @@ export default function BreakdownDialog({ budget, open, onClose, returnRef }: Pr
     ...income.map(
       (i): [string, string] => [`${i.label} (day ${i.day})`, "+ " + formatINR(i.amount)],
     ),
-    ["Opening balance", formatINR(openingBalance)],
+    ["Opening balance", formatINR(calcOpening(openingBase, income, currentDay))],
     [`Spent so far (${spent.length} items)`, "− " + formatINR(openingBalance - real.balance)],
     ["Balance now", formatINR(real.balance)],
     ["Committed ahead (day " + currentDay + "–" + totalDays + ")", "− " + formatINR(real.committedAhead)],

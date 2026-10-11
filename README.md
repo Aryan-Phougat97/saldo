@@ -49,6 +49,7 @@ npm run build      # type-check + production build into dist/
 npm test           # unit + axe tests (Vitest)
 npm run lint       # ESLint, zero warnings allowed
 npm run typecheck  # tsc --noEmit, zero errors allowed
+npx knip           # dead files, deps, and exports — must report none
 ```
 
 ---
@@ -79,7 +80,8 @@ Purchases and subscriptions go through **Try a purchase first**; cancellations t
 **Subscriptions** (shows monthly + yearly savings); surprises through **Unexpected expenses**
 (pay now / split over 7 days / defer 7 days); savings through the goal card's transfer row. Every
 path previews before anything moves — balance, safe-to-spend, goal date, forecast, risk, health —
-then **Apply** commits it (and logs it) or **Discard** drops it without a trace.
+then **Apply** commits it (and logs it) or **Discard** drops it without a trace. Applied a
+wrong call? **Undo** in the decision log reverses the most recent apply, restoring every number.
 
 Applied decisions cascade in order: balance → safe-to-spend → goal date → forecast → steadiness
 (instant when reduced motion is requested). **Reset demo** in the footer restores day 12.
@@ -176,6 +178,10 @@ Decision kinds: `purchase`, `subscribe`, `cancel-subscription`, `shock` (pay-now
 - No chart library (hand SVG), no router (hash routes), no images, no runtime fetches.
 - Measured production bundle: **JS ~83KB gzip** (target <150KB ✓), **CSS ~7.9KB gzip** (✓);
   dialog code-split into its own 3.7KB chunk via `React.lazy` (null fallback, no layout shift).
+- Measured with Lighthouse 13.4 on the production build — **mobile 97 / 100 / 100 / 100,
+  desktop 100 across the board** (Performance / Accessibility / Best Practices / SEO).
+  Accessibility went 96 → 100 by darkening the faint-ink token to a computed 4.9:1 minimum and
+  moving 9px strip numerals onto the stronger ink. Full numbers and notes in AUDIT.md.
 - Font stays optimal: self-hosted Inter Variable with `font-display: swap` + unicode-range, so only
   latin + latin-ext (~133KB, async) ever download.
 - Derivations memoized; form inputs keep local state so typing never re-renders the tree; static
@@ -193,7 +199,8 @@ Testing Library, axe-core, ESLint (ts, react-hooks, jsx-a11y).
 ```
 src/
   domain/      # pure TS, zero React: types, formulas, health, risk, simulate, selectors
-  state/       # store.ts — useReducer + draft layer + stagger timers (single owner)
+  state/       # store.ts — useReducer + draft layer + undo history + stagger timers;
+               # scenario.ts — fixed month parameters and fresh-state factory
   data/        # seed.ts — the typed mock month, scenario comment included
   lib/         # format (INR, day math), series (forecast + SVG path builders)
   components/  # shared: dialog, simulator form, chart, health, wordmark, error boundary
@@ -202,8 +209,10 @@ src/
 ```
 
 Rules honored: no `any`, no unchecked casts, no non-null assertions; every file <250 lines;
-`npm run lint` clean at `--max-warnings 0`. Components read through `selectDerived`/`selectPreview`,
-never recombine formulas. See `docs/decisions.md` for the why behind the big calls.
+`npm run lint` clean at `--max-warnings 0`; `npx knip` reports zero unused files, deps, or exports.
+Components read through `selectDerived`/`selectPreview`, never recombine formulas. Amount rules,
+cancellation maths, and shock copy live once in `src/domain/decisions.ts`, tested, and shared by
+every panel. See `docs/decisions.md` for the why behind the big calls.
 
 ---
 
@@ -214,17 +223,18 @@ npm test            # all suites once
 npm run test:watch  # watch mode
 ```
 
-42 tests, 5 files: 12 core formula tests, 7 edge cases (zero balance, finished/unreachable goals,
-in-window/past-window commitments, clamps), 6 risk classifications, 11 engine tests (all five
-decision kinds, double-apply rejection, input purity via frozen state), 4 selector tests (seed
-numbers, preview≡apply, no-touch preview), 2 axe tests. Manual release checklist: fresh load with a
+64 tests, 8 files: 12 core formula tests, 9 edge/opening cases, 6 risk classifications,
+11 engine tests (all five decision kinds, double-apply rejection, input purity via frozen state),
+7 decision-helper tests (validation, impact, shock copy), 4 selector tests, 8 store-flow tests
+(preview/apply/discard/undo/reset at hook level), 5 simulator interaction tests (inline errors,
+preview rows, apply, discard), 2 axe tests. Manual release checklist: fresh load with a
 clean console → breakdown open/Escape → apply (1-2-3-4-5 order) → discard (nothing moves) → cancel
-a subscription → answer a shock → reset → keyboard-only full pass → 375/768/1280px.
+a subscription → answer a shock → undo → reset → keyboard-only full pass → 375/768/1280px.
 
-End-to-end in a real Chromium (`node scripts/e2e.mjs` with `npm run dev` running): 21 checks cover
+End-to-end in a real Chromium (`node scripts/e2e.mjs` with `npm run dev` running): 23 checks cover
 fresh load, overflow at 375/768/1280 on both views, keyboard-only dialog open/close with focus
 return, preview → apply → discard, subscription cancel with annual impact, shock response, decision
-log entries, reset, and zero console errors or warnings.
+log entries, undo restoring numbers, reset, and zero console errors or warnings.
 
 ---
 
@@ -262,7 +272,7 @@ Serve `dist/` from any static host. No env vars, no server; hash routing needs n
 | Health score, 4 components, tap-to-explain | HealthScore + `calcHealth` |
 | Forecast line bends | ForecastChart dashed preview path |
 | Apply/discard, discard leaves no trace | Reducer draft layer, DecisionLog (applied only) |
-| Decision log with costs | DecisionLog |
+| Decision log with costs | DecisionLog (applied entries only) + Undo (history-capped) |
 | Reduced-motion version | Instant updates, tested via media query |
 | Small bundle, no chart lib, self-hosted font | §8 measurements |
 

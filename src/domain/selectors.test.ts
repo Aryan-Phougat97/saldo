@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInitialState, contextOf, scenarioOf } from "../state/store";
+import { createInitialState, contextOf, scenarioOf } from "../state/scenario";
 import { selectDerived, selectPreview } from "./selectors";
 
 describe("selectors", () => {

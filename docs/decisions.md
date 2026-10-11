@@ -31,6 +31,14 @@ It is the sole UI hidden behind an interaction. Everything else is above the fol
 view; splitting further would add loading states without measurable gain (main JS is ~83KB gzip
 against a 150KB budget).
 
+## Why undo lives in the reducer as snapshots
+
+A wrong apply must restore *every* number, including the log itself. Reversing by arithmetic
+(removing one spent line) would desync derived state the moment kinds interact, so each apply
+pushes the pre-apply committed slice onto a capped history stack (30). Undo pops it. Drafts are
+excluded — undo never resurrects a preview. Covered at hook level (stacked undos, empty history,
+post-reset) and in the browser e2e.
+
 ## What was deliberately not built
 
 Multi-month state, editable history, categories, accounts, and a real backend — all out of the

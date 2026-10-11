@@ -2,49 +2,35 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { formatINR } from "../lib/format";
 import { seed } from "../data/seed";
 import { selectDerived, selectPreview } from "../domain/selectors";
-import { applyDecision, type ApplyContext } from "../domain/simulate";
+import { applyDecision } from "../domain/simulate";
 import type { BudgetState, Decision, Derived } from "../domain/types";
+import { contextOf, createInitialState, scenarioOf } from "./scenario";
 
-export interface Scenario {
-  currentDay: number;
-  totalDays: number;
-  openingBalance: number;
-  bufferTarget: number;
-}
-
-export function scenarioOf(): Scenario {
-  return {
-    currentDay: seed.currentDay,
-    totalDays: seed.totalDays,
-    openingBalance: seed.openingBalance,
-    bufferTarget: seed.bufferTarget,
-  };
-}
-
-export function contextOf(): ApplyContext {
-  return { currentDay: seed.currentDay, totalDays: seed.totalDays, shocks: seed.shocks };
-}
-
-/** Fresh committed state copied from the seed (never the seed arrays themselves). */
-export function createInitialState(): BudgetState {
-  return {
-    spent: seed.spent.map((s) => ({ ...s })),
-    commitments: seed.commitments.map((c) => ({ ...c })),
-    cancelled: [],
-    goals: seed.goals.map((g) => ({ ...g })),
-    usedShocks: [],
-    log: [],
-  };
-}
-
-export interface StoreShape extends BudgetState {
+interface StoreShape extends BudgetState {
   draft: Decision | null;
+  /** Committed snapshots before each apply, newest last (capped). Powers undo. */
+  past: BudgetState[];
 }
+
+/** The committed slice of a store, without draft or history. */
+function snapshot(s: StoreShape): BudgetState {
+  return {
+    spent: s.spent,
+    commitments: s.commitments,
+    cancelled: s.cancelled,
+    goals: s.goals,
+    usedShocks: s.usedShocks,
+    log: s.log,
+  };
+}
+
+const HISTORY_LIMIT = 30;
 
 type Action =
   | { type: "SET_DRAFT"; decision: Decision }
   | { type: "CLEAR_DRAFT" }
   | { type: "APPLY_DRAFT" }
+  | { type: "UNDO" }
   | { type: "RESET" };
 
 function reducer(state: StoreShape, action: Action): StoreShape {
@@ -57,10 +43,15 @@ function reducer(state: StoreShape, action: Action): StoreShape {
       if (!state.draft) return state;
       const { state: next, ok } = applyDecision(state, state.draft, contextOf());
       if (!ok) return { ...state, draft: null };
-      return { ...next, draft: null };
+      return { ...next, draft: null, past: [...state.past, snapshot(state)].slice(-HISTORY_LIMIT) };
+    }
+    case "UNDO": {
+      const prev = state.past[state.past.length - 1];
+      if (!prev) return state;
+      return { ...prev, draft: null, past: state.past.slice(0, -1) };
     }
     case "RESET":
-      return { ...createInitialState(), draft: null };
+      return { ...createInitialState(), draft: null, past: [] };
   }
 }
 
@@ -82,6 +73,7 @@ export function useBudgetStore() {
   const [store, dispatch] = useReducer(reducer, undefined, () => ({
     ...createInitialState(),
     draft: null,
+    past: [],
   }));
   const [hotStage, setHotStage] = useState(0);
   const [announcement, setAnnouncement] = useState("");
@@ -191,6 +183,22 @@ export function useBudgetStore() {
     setAnnouncement("Scenario reset. Back to day 12 with a fresh month.");
   }, [clearTimers]);
 
+  const canUndo = store.past.length > 0;
+
+  const undo = useCallback(() => {
+    const prev = store.past[store.past.length - 1];
+    if (!prev) return;
+    const lastEntry = store.log[store.log.length - 1];
+    clearTimers();
+    dispatch({ type: "UNDO" });
+    const after = selectDerived(prev, scenario);
+    setAnnouncement(
+      lastEntry
+        ? `Undid ${lastEntry.label}. Balance back to ${formatINR(after.balance)}.`
+        : "Undid the last decision.",
+    );
+  }, [store, scenario, clearTimers]);
+
   const goal = store.goals[0];
 
   return {
@@ -204,6 +212,8 @@ export function useBudgetStore() {
     simulate,
     discard,
     apply,
+    undo,
+    canUndo,
     resetScenario,
     real,
     preview,
@@ -222,6 +232,5 @@ export function useBudgetStore() {
   };
 }
 
-export type BudgetStore = ReturnType<typeof useBudgetStore>;
-/** Historic alias kept while components migrate; prefer BudgetStore. */
-export type Budget = BudgetStore;
+/** The full store object passed to demo components. */
+export type Budget = ReturnType<typeof useBudgetStore>;

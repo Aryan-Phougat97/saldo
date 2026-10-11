@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInitialState } from "../state/store";
+import { createInitialState } from "../state/scenario";
 import { applyDecision, type ApplyContext } from "./simulate";
 import type { BudgetState } from "./types";
 

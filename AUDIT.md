@@ -37,14 +37,44 @@
 - `index-*.css` 38.5KB / **~7.9KB gzip** (target <30KB gzip ✓)
 - Fonts: latin 48KB + latin-ext 85KB download in practice; other subsets never fetch (unicode-range).
 
-## Verification log
+## Round 2 — rigorous quality pass
+
+- Knip: removed `axe-core` (unused direct dep) and `daysBetween` (speculative helper); wired
+  `calcOpening`, `sumSpent`, `RiskLevel` into real use; un-exported `StoreShape`; collapsed
+  `BudgetStore` into `Budget`. Knip reports zero unused files, deps, or exports.
+- `src/domain/decisions.ts`: single tested home for amount validation, cancellation impact, and
+  shock copy (was duplicated across three panels).
+- Undo via capped reducer history, tested at hook level and in e2e.
+- Tests 42 → 64; e2e 21 → 23; `store.ts` split back under 250 lines.
+
+## Verification log (final)
+
+Measured with Lighthouse 13.4 against the **production build** (`npm run build` +
+`vite preview`), mobile (simulated throttling) and desktop. Re-verified on a fresh build
+after the contrast/favicon/robots fixes — identical results:
+
+| Category | Mobile | Desktop |
+|---|---|---|
+| Performance | 97 | 100 |
+| Accessibility | 100 | 100 |
+| Best Practices | 100 | 100 |
+| SEO | 100 | 100 |
+
+Remaining sub-0.9 notes: FCP 2.1s on throttled mobile (0.81), 46KB "unused JavaScript" (React
+itself — irreducible without dropping the framework), render-blocking CSS insight (normal for
+any utility-CSS build). The experimental Agentic Browsing category scores 75 on one audit,
+`ard-schema`: it fetches `/ai-catalog.json` and our SPA fallback serves HTML. Deliberately left
+alone — Saldo exposes no agent resource, and inventing a catalog entry for one would be fake
+content to game a metric (see `docs/decisions.md`). On hosts without SPA fallback the file 404s
+and the audit correctly excludes itself.
 
 | Check | Result |
 |---|---|
-| `npm run typecheck` | 0 errors |
 | `npm run lint` (`--max-warnings 0`) | 0 warnings |
+| `npm run typecheck` | 0 errors |
+| `npx knip` | 0 unused files, deps, exports |
 | `npm run build` | 0 errors (exit 0) |
-| `npm test` | 42 passed (5 files) |
+| `npm test` | 64 passed (8 files) |
 | axe (jsdom, landing + demo) | 0 violations |
 | Playwright end-to-end (chromium, `scripts/e2e.mjs`) | 21/21 pass, 0 console errors, 0 warnings |
 | Fresh-load console errors | none (captured in e2e) |

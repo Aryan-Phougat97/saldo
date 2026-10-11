@@ -1,21 +1,19 @@
 import { formatINR } from "../../lib/format";
+import { describeShockResponse } from "../../domain/decisions";
+import type { ShockResponse } from "../../domain/types";
 import type { Budget } from "../../state/store";
-import type { ShockEvent } from "../../domain/types";
 
-const RESPONSES = [
+const RESPONSES: Array<{ id: ShockResponse; label: string }> = [
   { id: "pay-now", label: "Pay now" },
   { id: "split", label: "Split over 7 days" },
   { id: "defer", label: "Defer 7 days" },
-] as const;
+];
 
-type ResponseId = (typeof RESPONSES)[number]["id"];
-
-const RESPONSE_COPY: Record<ResponseId, (shock: ShockEvent) => string> = {
-  "pay-now": (s) => `Full ${formatINR(s.amount)} leaves the balance today.`,
-  split: (s) =>
-    `${formatINR(Math.round(s.amount / 2))} leaves today, the rest becomes a bill due in 7 days.`,
-  defer: (s) => `Nothing leaves today; the full ${formatINR(s.amount)} becomes a bill due in 7 days.`,
-};
+function responseLabel(response: ShockResponse): string {
+  if (response === "pay-now") return "pay now";
+  if (response === "split") return "split over 7 days";
+  return "defer 7 days";
+}
 
 /**
  * Unexpected expenses as their own category. Each shock is answered once —
@@ -71,14 +69,11 @@ export default function Shocks({ budget }: { budget: Budget }) {
       {shockDraft && shockTarget && preview && (
         <div aria-live="polite" className="mt-3 rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 text-sm">
           <p className="font-semibold">
-            Preview: {shockTarget.label} —{" "}
-            {shockDraft.response === "pay-now"
-              ? "pay now"
-              : shockDraft.response === "split"
-                ? "split over 7 days"
-                : "defer 7 days"}
+            Preview: {shockTarget.label} — {responseLabel(shockDraft.response)}
           </p>
-          <p className="mt-1 text-[var(--color-ink-soft)]">{RESPONSE_COPY[shockDraft.response](shockTarget)}</p>
+          <p className="mt-1 text-[var(--color-ink-soft)]">
+            {describeShockResponse(shockTarget, shockDraft.response)}
+          </p>
           <p className="tnum mt-1">
             Balance {formatINR(real.balance)} → {formatINR(preview.balance)} · safe{" "}
             {formatINR(real.safe)} → {formatINR(preview.safe)} · risk {real.risk.level} →{" "}

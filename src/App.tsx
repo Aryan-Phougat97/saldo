@@ -2,6 +2,7 @@ import { Suspense, lazy, useRef, useState } from "react";
 import "./styles/index.css";
 import { useBudgetStore } from "./state/store";
 import { formatINR } from "./lib/format";
+import { calcOpening } from "./domain/formulas";
 import Wordmark from "./components/Wordmark";
 import Simulator from "./components/Simulator";
 import ForecastChart from "./components/ForecastChart";
@@ -79,7 +80,7 @@ export default function App() {
               {formatINR(shown.balance)}
             </p>
             <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-              Opens at {formatINR(openingBalance)} — {formatINR(openingBase)} cash
+              Opens at {formatINR(calcOpening(openingBase, income, currentDay))} — {formatINR(openingBase)} cash
               {income.map((i) => ` + ${formatINR(i.amount)} ${i.label.toLowerCase()} (day ${i.day})`).join("")}.
             </p>
             <p className="mt-5 text-sm text-[var(--color-ink-soft)]">Safe to spend today</p>

@@ -28,7 +28,7 @@ function MonthStrip() {
               key={d}
               title={`Day ${d}${isSpent ? " · spent" : ""}${isBill ? " · bill due" : ""}${isToday ? " · today" : ""}`}
               className={`flex aspect-square min-w-0 items-center justify-center rounded-md border text-[9px] font-semibold ${
-                isSpent ? "text-white" : "text-[var(--color-ink-faint)]"
+                isSpent ? "text-white" : "text-[var(--color-ink-soft)]"
               } ${isToday ? "outline outline-2 outline-offset-1 outline-[#0a5cf5]" : ""} ${cls}`}
             >
               {d === seed.currentDay || d === seed.goals[0].deadlineDay ? d : ""}

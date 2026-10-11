@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatINR } from "../lib/format";
+import { parseAmount } from "../domain/decisions";
 import type { Budget } from "../state/store";
 
 export default function Simulator({ budget }: { budget: Budget }) {
@@ -11,18 +12,14 @@ export default function Simulator({ budget }: { budget: Budget }) {
   const [error, setError] = useState("");
 
   const startPreview = () => {
-    const n = Number(amount);
     const d = Number(day);
     if (!label.trim()) {
       setError("Give the purchase a name.");
       return;
     }
-    if (!Number.isFinite(n) || n <= 0) {
-      setError("Enter an amount above ₹0.");
-      return;
-    }
-    if (n > 100000) {
-      setError("Keep it under ₹1,00,000 — this demo covers one small month.");
+    const parsed = parseAmount(amount);
+    if (!parsed.ok) {
+      setError(parsed.error);
       return;
     }
     if (!Number.isFinite(d) || d < 1 || d > totalDays) {
@@ -33,8 +30,8 @@ export default function Simulator({ budget }: { budget: Budget }) {
     const trimmed = label.trim();
     simulate(
       recurring
-        ? { kind: "subscribe", label: trimmed, amount: n, day: Math.round(d) }
-        : { kind: "purchase", label: trimmed, amount: n, day: Math.round(d) },
+        ? { kind: "subscribe", label: trimmed, amount: parsed.value, day: Math.round(d) }
+        : { kind: "purchase", label: trimmed, amount: parsed.value, day: Math.round(d) },
     );
   };
 

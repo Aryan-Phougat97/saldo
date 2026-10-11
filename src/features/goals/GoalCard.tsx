@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatINR } from "../../lib/format";
+import { parseAmount } from "../../domain/decisions";
 import type { Budget } from "../../state/store";
 
 /**
@@ -28,17 +29,13 @@ export default function GoalCard({ budget }: { budget: Budget }) {
     simulation && simulation.kind === "transfer-goal" ? simulation : null;
 
   const startTransfer = () => {
-    const n = Number(amount);
-    if (!Number.isFinite(n) || n <= 0) {
-      setError("Enter an amount above ₹0 to move.");
-      return;
-    }
-    if (n > 100000) {
-      setError("Keep it under ₹1,00,000 — this demo covers one small month.");
+    const parsed = parseAmount(amount);
+    if (!parsed.ok) {
+      setError(parsed.error);
       return;
     }
     setError("");
-    simulate({ kind: "transfer-goal", goalId: goal.id, amount: n });
+    simulate({ kind: "transfer-goal", goalId: goal.id, amount: parsed.value });
   };
 
   const progress = goal.target > 0 ? Math.min(100, (goal.saved / goal.target) * 100) : 0;

@@ -7,8 +7,10 @@ import {
   calcForecastEnd,
   calcGoalFinishDay,
   calcGoalPace,
+  calcOpening,
   calcSafeToSpend,
   calcSpendable,
+  sumSpent,
 } from "./formulas";
 import { calcHealth } from "./health";
 import { seed } from "../data/seed";
@@ -76,6 +78,18 @@ describe("core formulas (seed: day 12 of 30, ₹10,000 budget)", () => {
 });
 
 describe("edge cases", () => {
+  it("opening adds base cash to income received so far", () => {
+    expect(calcOpening(6000, seed.income, 12)).toBe(10000);
+    // Income arriving after today does not count yet.
+    expect(
+      calcOpening(6000, [...seed.income, { id: "i2", label: "Later", amount: 500, day: 20 }], 12),
+    ).toBe(10000);
+  });
+
+  it("sumSpent totals the seed's three spends", () => {
+    expect(sumSpent(seed.spent)).toBe(1170);
+    expect(sumSpent([])).toBe(0);
+  });
   it("zero balance clamps spendable and safe to zero", () => {
     const balance = calcBalance(1000, [{ id: "a", label: "All of it", amount: 1000, day: 1 }]);
     expect(balance).toBe(0);

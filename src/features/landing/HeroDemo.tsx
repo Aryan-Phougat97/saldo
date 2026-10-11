@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { seed } from "../../data/seed";
+import { contextOf, createInitialState, scenarioOf } from "../../state/scenario";
 import { selectDerived, selectPreview } from "../../domain/selectors";
 import { buildForecastSeries, linePath } from "../../lib/series";
 import { formatINR } from "../../lib/format";
-import { contextOf, createInitialState, scenarioOf } from "../../state/store";
 import MonthStrip from "./MonthStrip";
 import { CHIPS, type Chip } from "./content";
 

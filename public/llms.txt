@@ -1,0 +1,9 @@
+# Saldo
+
+> Know what a purchase costs before you buy. A calm budget companion for a ₹10,000 / 30-day month.
+
+Saldo turns a ₹10,000 month into one daily number. Simulate any purchase, see what moves — balance, daily allowance, goal date, forecast, risk, steadiness — then apply it or walk away. Mock data only; nothing leaves your browser.
+
+- Live demo: [Open the demo](http://localhost:5177/#/app)
+- How it works: [Moments](http://localhost:5177/#moments) · [The maths](http://localhost:5177/#maths) · [FAQ](http://localhost:5177/#faq)
+- Source and docs: [README](./README.md) · [Decisions](./docs/decisions.md) · [Changelog](./CHANGELOG.md)

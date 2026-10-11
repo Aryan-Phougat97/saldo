@@ -1,4 +1,5 @@
 import { formatINR } from "../../lib/format";
+import { cancellationImpact } from "../../domain/decisions";
 import type { Budget } from "../../state/store";
 
 /**
@@ -32,33 +33,36 @@ export default function Subscriptions({ budget }: { budget: Budget }) {
       )}
 
       <ul className="mt-3 divide-y divide-[var(--color-hairline)]">
-        {recurring.map((c) => (
-          <li key={c.id} className="flex items-center justify-between gap-3 py-2.5">
-            <div className="text-sm">
-              <p className="font-medium">
-                {c.label} <span className="text-[var(--color-ink-faint)]">· day {c.day}</span>
-              </p>
-              <p className="tnum text-[var(--color-ink-soft)]">
-                {formatINR(c.amount)}/mo · {formatINR(c.amount * 12)}/yr
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => simulate({ kind: "cancel-subscription", commitmentId: c.id })}
-              className="min-h-[44px] shrink-0 rounded-xl border border-[var(--color-hairline)] bg-white px-4 text-sm font-medium active:scale-[0.98]"
-            >
-              Simulate cancel
-            </button>
-          </li>
-        ))}
+        {recurring.map((c) => {
+          const impact = cancellationImpact(c.amount);
+          return (
+            <li key={c.id} className="flex items-center justify-between gap-3 py-2.5">
+              <div className="text-sm">
+                <p className="font-medium">
+                  {c.label} <span className="text-[var(--color-ink-faint)]">· day {c.day}</span>
+                </p>
+                <p className="tnum text-[var(--color-ink-soft)]">
+                  {formatINR(impact.monthly)}/mo · {formatINR(impact.annual)}/yr
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => simulate({ kind: "cancel-subscription", commitmentId: c.id })}
+                className="min-h-[44px] shrink-0 rounded-xl border border-[var(--color-hairline)] bg-white px-4 text-sm font-medium active:scale-[0.98]"
+              >
+                Simulate cancel
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {cancelDraft && cancelTarget && preview && (
         <div aria-live="polite" className="mt-3 rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-4 text-sm">
           <p className="font-semibold">Preview: cancel {cancelTarget.label}</p>
           <p className="tnum mt-1">
-            Month keeps <strong>{formatINR(cancelTarget.amount)}</strong> · year would have cost{" "}
-            <strong>{formatINR(cancelTarget.amount * 12)}</strong>
+            Month keeps <strong>{formatINR(cancellationImpact(cancelTarget.amount).monthly)}</strong> · year would have cost{" "}
+            <strong>{formatINR(cancellationImpact(cancelTarget.amount).annual)}</strong>
           </p>
           <p className="tnum mt-1 text-[var(--color-ink-soft)]">
             Safe to spend {formatINR(real.safe)} → {formatINR(preview.safe)} a day.

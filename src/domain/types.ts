@@ -39,12 +39,15 @@ export interface ShockEvent {
   note: string;
 }
 
+/** How a shock is answered: full hit today, halved across a week, or pushed a week out. */
+export type ShockResponse = "pay-now" | "split" | "defer";
+
 /** Every decision a user can preview and then apply or discard. */
 export type Decision =
   | { kind: "purchase"; label: string; amount: number; day: number }
   | { kind: "subscribe"; label: string; amount: number; day: number }
   | { kind: "cancel-subscription"; commitmentId: string }
-  | { kind: "shock"; shockId: string; response: "pay-now" | "split" | "defer" }
+  | { kind: "shock"; shockId: string; response: ShockResponse }
   | { kind: "transfer-goal"; goalId: string; amount: number };
 
 /** A committed record of one applied decision, shown in the decision log. */

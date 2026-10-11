@@ -1,5 +1,18 @@
 # Changelog
 
+## Round 2 — architecture, quality, undo
+
+- Knip pass: removed one dead dependency (`axe-core`, unused direct install) and one speculative
+  helper (`daysBetween`); wired the remaining flagged exports into real use (`calcOpening`,
+  `sumSpent`, `RiskLevel`); un-exported internals. Knip now reports zero unused items.
+- Centralized validation, cancellation maths, and shock copy in `src/domain/decisions.ts`
+  (tested); Simulator, GoalCard, Subscriptions, and Shocks all read from it.
+- Undo: history-capped snapshots in the reducer, Undo button in the decision log with empty-state
+  disabling and polite announcements.
+- Tests: 42 → 64 (store flows, simulator interaction, decision helpers, opening/sum coverage).
+- Split `src/state/store.ts` back under 250 lines (`scenario.ts` extracted).
+- E2E: 21 → 23 checks (undo restore + log shrink).
+
 ## Improvement pass (Batch A–F)
 
 ### Architecture

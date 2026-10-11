@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/main.tsx", "scripts/e2e.mjs"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"],
+  "ignore": ["dist/**"],
+  "ignoreDependencies": [
+    "@fontsource-variable/inter",
+    "tailwindcss"
+  ]
+}
